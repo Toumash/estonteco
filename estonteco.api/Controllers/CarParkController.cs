@@ -10,42 +10,42 @@ using Microsoft.AspNetCore.Mvc;
 namespace estonteco.api.Controllers
 {
     [Produces("application/json")]
-    [Route("api/[controller]/[action]")]
-    public class AddressController : Controller
+    public class CarParkController : Controller
     {
         EstontecoDbContext _dba;
 
-        public AddressController(EstontecoDbContext context)
+        public CarParkController(EstontecoDbContext context)
         {
             _dba = context;
         }
-        // GET: api/Address
+
+        // GET: api/CarPark
         public IEnumerable<Parking> Get()
         {
             return _dba.Parkingi.ToList();
         }
 
-        // GET: api/Address/5
+        // GET: api/CarPark/5
         [HttpGet("{id}")]
         public string Get(int id)
         {
             return "value";
         }
-        
-        // POST: api/Address
+
+        // POST: api/CarPark
         [HttpPost]
         public void Post([FromBody]Parking value)
         {
             _dba.Parkingi.Add(value);
         }
-        
-        // PUT: api/Address/5
+
+        // PUT: api/CarPark/5
         [HttpPut("{id}")]
         public void Put(int id, [FromBody]string value)
         {
         }
-        
-        // DELETE: api/ApiWithActions/5
+
+        // DELETE: api/CarPark/5
         [HttpDelete("{id}")]
         public void Delete(int id)
         {

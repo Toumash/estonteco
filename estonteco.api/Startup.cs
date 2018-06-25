@@ -1,9 +1,12 @@
 ﻿using System;
+using System.IO;
 using estonteco.api.DAL;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.FileProviders;
 
 namespace estonteco.api
 {
@@ -38,8 +41,25 @@ namespace estonteco.api
             {
                 routes.MapRoute(
                     name: "api",
-                    template: "{controller}/{action}/{id?}");
+                    template: "api/{controller}/{action}/{id?}");
+                routes.MapRoute(
+                    name: "default",
+                    template: "{controller=Default}/{action=Index}/{id?}");
             });
+
+            // For wwwroot directory
+            app.UseStaticFiles();
+
+            // Add support for node_modules but only during development **temporary**
+            if (env.IsDevelopment())
+            {
+                app.UseStaticFiles(new StaticFileOptions()
+                {
+                    FileProvider = new PhysicalFileProvider(
+                      Path.Combine(Directory.GetCurrentDirectory(), @"node_modules")),
+                    RequestPath = new PathString("/vendor")
+                });
+            }
         }
     }
 }
