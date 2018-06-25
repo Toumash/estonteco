@@ -9,7 +9,8 @@ namespace estonteco.api.DAL
 {
     public class EstontecoDbContext : DbContext
     {
-        public DbSet<InfoRezerwacja> Stu { get; set; }
+        public DbSet<InfoRezerwacja> Rezerwacje { get; set; }
+        public DbSet<Parking> Parkingi { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {

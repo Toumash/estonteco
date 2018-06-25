@@ -5,9 +5,10 @@ using System.Threading.Tasks;
 
 namespace estonteco.api.Model
 {
-    public class Adres
+    public class Parking
     {
         public int Id{ get; set; }
-        public int MyProperty { get; set; }
+     
+        public string Nazwa { get; set; }
     }
 }
