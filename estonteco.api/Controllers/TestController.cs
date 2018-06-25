@@ -25,7 +25,7 @@ namespace estonteco.api.Controllers
         }
 
         // GET: api/Test/test
-        [HttpPost]
+        [HttpGet]
         public IActionResult Test()
         {
             return Ok("OK");

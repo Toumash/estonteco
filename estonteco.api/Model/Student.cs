@@ -12,6 +12,7 @@ namespace estonteco.api.Model
         public int Miejsce { get; set; }
         public bool CzyZarezerwowane { get; set; }
         public bool CzyZajete { get; set; }
-        public decimal DlugoscSzerokosc { get; set; }
+        public double DlugoscGeo { get; set; }
+        public double SzerokoscGeo { get; set; }
     }
 }

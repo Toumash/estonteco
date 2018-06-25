@@ -14,10 +14,7 @@ namespace estonteco.api.DAL
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            if (!optionsBuilder.IsConfigured)
-            {
-                optionsBuilder.UseMySql("server=localhost;port=3306;user=Estonteco;password=QnG96Pnn;database=estonteco");
-            }
+            optionsBuilder.UseSqlServer("Server=localhost;Database=estonteco;Trusted_Connection=True;User Id=estonteco_app;Password=3bXwH_Bn#e}@H/,%;");
         }
     }
 }
