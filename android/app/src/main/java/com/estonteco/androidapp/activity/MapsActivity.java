@@ -2,11 +2,12 @@ package com.estonteco.androidapp.activity;
 
 import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
-import android.util.Log;
 import android.widget.Toast;
 
 import com.estonteco.androidapp.R;
-import com.estonteco.androidapp.model.api.Reservation;
+import com.estonteco.androidapp.model.api.ParkingSlot;
+import com.estonteco.androidapp.model.api.ReservationAdded;
+import com.estonteco.androidapp.model.api.ReservationRequest;
 import com.estonteco.androidapp.network.ReservationService;
 import com.estonteco.androidapp.network.RetrofitClientInstance;
 import com.google.android.gms.maps.CameraUpdate;
@@ -16,17 +17,23 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, GoogleMap.OnMarkerClickListener {
 
+    Map<Marker, ParkingSlot> markerMap;
+    ReservationService reservationService = RetrofitClientInstance.getRetrofitInstance().create(ReservationService.class);
     private GoogleMap mMap;
+    private List<ParkingSlot> mParkingSlots;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -36,36 +43,30 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
-
-
+        markerMap = new HashMap<>();
     }
 
-
-    /**
-     * Manipulates the map once available.
-     * This callback is triggered when the map is ready to be used.
-     * This is where we can add markers or lines, add listeners or move the camera. In this case,
-     * we just add a marker near Sydney, Australia.
-     * If Google Play services is not installed on the device, the user will be prompted to install
-     * it inside the SupportMapFragment. This method will only be triggered once the user has
-     * installed Google Play services and returned to the app.
-     */
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
-        ReservationService service = RetrofitClientInstance.getRetrofitInstance().create(ReservationService.class);
-        Call<List<Reservation>> call = service.getAllReservations();
-        call.enqueue(new Callback<List<Reservation>>() {
+
+        Call<List<ParkingSlot>> call = reservationService.getAllParkingSlots();
+        call.enqueue(new Callback<List<ParkingSlot>>() {
             @Override
-            public void onResponse(Call<List<Reservation>> call, Response<List<Reservation>> response) {
-                if (response.body() != null) {
-                    List<Reservation> reservations = response.body();
-                    for (Reservation r : reservations) {
-                        mMap.addMarker(new MarkerOptions().position(new LatLng(r.DlugoscGeo, r.SzerokoscGeo)).title("xd"));
+            public void onResponse(Call<List<ParkingSlot>> call, Response<List<ParkingSlot>> response) {
+                mParkingSlots = response.body();
+                if (mParkingSlots != null) {
+                    for (ParkingSlot r : mParkingSlots) {
+                        Marker marker = mMap.addMarker(
+                                new MarkerOptions()
+                                        .position(new LatLng(r.DlugoscGeo, r.SzerokoscGeo))
+                                        .title("xd")
+                        );
+                        markerMap.put(marker, r);
                     }
 
                     // animate camera to last entry
-                    Reservation last = reservations.get(reservations.size() - 1);
+                    ParkingSlot last = mParkingSlots.get(mParkingSlots.size() - 1);
                     LatLng latlong = new LatLng(last.DlugoscGeo, last.SzerokoscGeo);
                     CameraPosition position = CameraPosition.builder().target(latlong).zoom(13).build();
                     CameraUpdate cameraUpdate = CameraUpdateFactory.newCameraPosition(position);
@@ -74,10 +75,33 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
 
             @Override
-            public void onFailure(Call<List<Reservation>> call, Throwable t) {
+            public void onFailure(Call<List<ParkingSlot>> call, Throwable t) {
                 //progressDoalog.dismiss();
                 Toast.makeText(MapsActivity.this, "Something went wrong...Please try later!", Toast.LENGTH_SHORT).show();
             }
         });
+        mMap.setOnMarkerClickListener(this);
+    }
+
+    @Override
+    public boolean onMarkerClick(Marker marker) {
+        ParkingSlot selectedParkingSlot = markerMap.get(marker);
+        ReservationRequest request = new ReservationRequest();
+        request.reservationId = selectedParkingSlot.Id;
+        reservationService.book(request)
+                .enqueue(new Callback<ReservationAdded>() {
+                    @Override
+                    public void onResponse(Call<ReservationAdded> call, Response<ReservationAdded> response) {
+                        Toast.makeText(MapsActivity.this, "Reservation made successfully. Reservation ID=" + response.body().reservationId, Toast.LENGTH_LONG)
+                                .show();
+                    }
+
+                    @Override
+                    public void onFailure(Call<ReservationAdded> call, Throwable t) {
+                        Toast.makeText(MapsActivity.this, "ERROR", Toast.LENGTH_LONG)
+                                .show();
+                    }
+                });
+        return false;
     }
 }

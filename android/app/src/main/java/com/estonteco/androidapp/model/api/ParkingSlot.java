@@ -2,7 +2,7 @@ package com.estonteco.androidapp.model.api;
 
 import com.google.gson.annotations.SerializedName;
 
-public class Reservation {
+public class ParkingSlot {
     @SerializedName("id")
     public int Id;
     @SerializedName("idParkingu")
