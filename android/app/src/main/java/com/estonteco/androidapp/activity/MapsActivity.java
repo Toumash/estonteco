@@ -56,6 +56,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     GoogleMap mMap;
     List<ParkingSlot> mParkingSlots;
     Context context;
+    Marker lastMarkerClicked = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -113,11 +114,29 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     @NonNull
     private MarkerOptions createMarkerFrom(ParkingSlot r) {
+        String title = getTitleFor(r);
+        String snippet = String.format(getString(R.string.parking_no), r.IdParkingu);
+        if (!r.CzyZarezerwowane && !r.CzyZajete) {
+            snippet = "Tapnij, aby zarezerwować";
+        }
         return new MarkerOptions()
                 .position(new LatLng(r.DlugoscGeo, r.SzerokoscGeo))
-                .title(String.valueOf(r.Miejsce))
-                .snippet(r.CzyZajete ? "Zajęte miejsce" : "Wolne miejsce")
-                .icon(BitmapDescriptorFactory.defaultMarker(r.CzyZajete ? BitmapDescriptorFactory.HUE_RED : BitmapDescriptorFactory.HUE_AZURE));
+                .title(title)
+                .snippet(snippet)
+                .icon(BitmapDescriptorFactory.defaultMarker(getColorFor(r)));
+    }
+
+    private float getColorFor(ParkingSlot r) {
+        if (r.CzyZajete) return BitmapDescriptorFactory.HUE_ROSE;
+        else if (r.CzyZarezerwowane) return BitmapDescriptorFactory.HUE_ROSE;
+        return BitmapDescriptorFactory.HUE_GREEN;
+    }
+
+    @NonNull
+    private String getTitleFor(ParkingSlot r) {
+        if (r.CzyZajete) return "Zajęte miejsce";
+        else if (r.CzyZarezerwowane) return "Zarezerwowane";
+        return "Wolne miejsce";
     }
 
     public AlertDialog.Builder getAlertBuilder() {
@@ -134,6 +153,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public boolean onMarkerClick(Marker marker) {
         final ParkingSlot selectedParkingSlot = markerMap.get(marker);
 
+        if (selectedParkingSlot.CzyZajete || selectedParkingSlot.CzyZarezerwowane) {
+            showSnackbar(l_main, "To miejsce jest już zajęte", Snackbar.LENGTH_SHORT);
+            return false;
+        }
+        if (lastMarkerClicked == null) {
+            lastMarkerClicked = marker;
+            return false;
+        }
+        lastMarkerClicked = marker;
+
         getAlertBuilder().setTitle("Rezerwacja miejsca")
                 .setMessage("Czy chcesz zarezerwować miejsce parkingowe #" + selectedParkingSlot.Id)
                 .setNegativeButton(android.R.string.cancel, null)
@@ -146,9 +175,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                             public void onResponse(Call<ReservationAdded> call, Response<ReservationAdded> response) {
                                 mReservationAdded = response.body();
                                 if (mReservationAdded != null) {
-                                    showSnackbar(l_main,
-                                            String.format("Reservation made successfully. Reservation ID %s",
-                                                    mReservationAdded.reservationId),
+                                    showSnackbar(l_main, getString(R.string.reservation_successfull, mReservationAdded.reservationId),
                                             Snackbar.LENGTH_LONG);
                                     cardView.setVisibility(View.VISIBLE);
                                     startReservationTimer(selectedParkingSlot);
@@ -169,6 +196,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         return false;
     }
 
+    private long limit(long value, long min) {
+        if (value < min)
+            return min;
+        return value;
+    }
+
+
     private void startReservationTimer(final ParkingSlot selectedParkingSlot) {
         final Handler handler = new Handler();
 
@@ -178,7 +212,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 handler.post(new Runnable() {
                     public void run() {
                         long expirationDate = mReservationAdded.expirationDate.getTime();
-                        long timeLeft = Math.min(expirationDate - (new Date()).getTime(), 0);
+                        long timeLeft = limit((expirationDate - (new Date()).getTime()), 0);
                         Date date = new Date();
                         date.setTime(timeLeft);
                         tv_card_time.setText(date.getMinutes() + " : " + date.getSeconds());
