@@ -4,6 +4,7 @@ import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.FragmentActivity;
 import android.support.v7.widget.CardView;
@@ -34,6 +35,8 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -132,10 +135,24 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                             showSnackbar(l_main, "Reservation made successfully. Reservation ID=" + mReservationAdded.reservationId, Snackbar.LENGTH_LONG);
 
                                             cardView.setVisibility(View.VISIBLE);
-                                            long timeLeft = mReservationAdded.expirationDate.getTime() - (new java.util.Date()).getTime();
-                                            Date date = new Date();
-                                            date.setTime(timeLeft);
-                                            tv_card_time.setText(date.getMinutes() + " : " + date.getSeconds());
+
+                                            final Handler handler = new Handler();
+
+                                            TimerTask timertask = new TimerTask() {
+                                                @Override
+                                                public void run() {
+                                                    handler.post(new Runnable() {
+                                                        public void run() {
+                                                            long timeLeft = mReservationAdded.expirationDate.getTime() - (new java.util.Date()).getTime();
+                                                            Date date = new Date();
+                                                            date.setTime(timeLeft);
+                                                            tv_card_time.setText(date.getMinutes() + " : " + date.getSeconds());
+                                                        }
+                                                    });
+                                                }
+                                            };
+                                            Timer timer = new Timer();
+                                            timer.schedule(timertask, 0, 1000);
                                         } else {
                                             showSnackbar(l_main, "ERROR", Snackbar.LENGTH_SHORT);
                                         }
