@@ -1,19 +1,16 @@
 package com.estonteco.androidapp.network;
 
-import com.estonteco.androidapp.model.api.ParkingSlot;
 import com.estonteco.androidapp.model.api.ReservationAdded;
 import com.estonteco.androidapp.model.api.ReservationRequest;
 
-import java.util.List;
-
 import retrofit2.Call;
-import retrofit2.http.GET;
+import retrofit2.http.Body;
+import retrofit2.http.Headers;
+import retrofit2.http.POST;
 
 public interface ReservationService {
 
-    @GET("/reservation/get")
-    Call<List<ParkingSlot>> getAllParkingSlots();
-
-    @GET("/reservation/add")
-    Call<ReservationAdded> book(ReservationRequest request);
+    @POST("reservation/add")
+    @Headers( "Content-Type: application/json" )
+    Call<ReservationAdded> book(@Body ReservationRequest request);
 }

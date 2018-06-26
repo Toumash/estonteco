@@ -1,12 +1,16 @@
 package com.estonteco.androidapp.network;
 
+import android.util.Log;
+
+import okhttp3.OkHttpClient;
+import okhttp3.logging.HttpLoggingInterceptor;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
 public class RetrofitClientInstance {
 
-    private static Retrofit retrofit;
     private static final String BASE_URL = "http://104.41.226.177/api/";
+    private static Retrofit retrofit;
 
     public static Retrofit getRetrofitInstance() {
         if (retrofit == null) {
