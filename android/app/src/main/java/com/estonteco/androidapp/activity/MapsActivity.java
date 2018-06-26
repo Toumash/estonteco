@@ -2,16 +2,19 @@ package com.estonteco.androidapp.activity;
 
 import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
+import android.util.Log;
 import android.widget.Toast;
 
 import com.estonteco.androidapp.R;
 import com.estonteco.androidapp.model.api.Reservation;
 import com.estonteco.androidapp.network.ReservationService;
 import com.estonteco.androidapp.network.RetrofitClientInstance;
+import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 
@@ -61,8 +64,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         mMap.addMarker(new MarkerOptions().position(new LatLng(r.DlugoscGeo, r.SzerokoscGeo)).title("xd"));
                     }
 
+                    // animate camera to last entry
                     Reservation last = reservations.get(reservations.size() - 1);
-                    mMap.moveCamera(CameraUpdateFactory.newLatLng(new LatLng(last.DlugoscGeo, last.SzerokoscGeo)));
+                    LatLng latlong = new LatLng(last.DlugoscGeo, last.SzerokoscGeo);
+                    CameraPosition position = CameraPosition.builder().target(latlong).zoom(13).build();
+                    CameraUpdate cameraUpdate = CameraUpdateFactory.newCameraPosition(position);
+                    mMap.animateCamera(cameraUpdate);
                 }
             }
 
