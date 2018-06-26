@@ -1,10 +1,12 @@
 package com.estonteco.androidapp.activity;
 
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.FragmentActivity;
 import android.support.v7.widget.CardView;
@@ -18,7 +20,6 @@ import com.estonteco.androidapp.model.api.ReservationAdded;
 import com.estonteco.androidapp.model.api.ReservationRequest;
 import com.estonteco.androidapp.network.NetworkServiceFactory;
 import com.estonteco.androidapp.network.ReservationService;
-import com.estonteco.androidapp.network.RetrofitClientInstance;
 import com.estonteco.androidapp.network.SlotService;
 import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -42,27 +43,32 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
+@SuppressWarnings("NullableProblems")
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, GoogleMap.OnMarkerClickListener {
 
     Map<Marker, ParkingSlot> markerMap;
-    ReservationService reservationService = RetrofitClientInstance.getRetrofitInstance().create(ReservationService.class);
+    ReservationService reservationService = NetworkServiceFactory.createReservationService();
     SlotService slotService = NetworkServiceFactory.createSlotService();
     ReservationAdded mReservationAdded;
     View l_main;
-    Snackbar xd;
     CardView cardView;
     TextView tv_card_time;
-    private GoogleMap mMap;
-    private List<ParkingSlot> mParkingSlots;
+    GoogleMap mMap;
+    List<ParkingSlot> mParkingSlots;
+    Context context;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
-        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
+        bindViews();
+        context = this;
+    }
+
+    void bindViews() {
         markerMap = new HashMap<>();
         l_main = findViewById(R.id.drawer_layout);
         cardView = findViewById(R.id.maps_cv);
@@ -78,91 +84,84 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             @Override
             public void onResponse(Call<List<ParkingSlot>> call, Response<List<ParkingSlot>> response) {
                 mParkingSlots = response.body();
-                if (mParkingSlots != null) {
-                    for (ParkingSlot r : mParkingSlots) {
-                        Marker marker = mMap.addMarker(
-                                new MarkerOptions()
-                                        .position(new LatLng(r.DlugoscGeo, r.SzerokoscGeo))
-                                        .title(String.valueOf(r.Miejsce))
-                                        .snippet(r.CzyZajete ? "Zajęte miejsce" : "Wolne miejsce")
-                                        .icon(BitmapDescriptorFactory.defaultMarker(r.CzyZajete ? BitmapDescriptorFactory.HUE_RED : BitmapDescriptorFactory.HUE_AZURE))
-                        );
-                        markerMap.put(marker, r);
-                    }
+                if (mParkingSlots == null)
+                    return;
 
-                    if (!mParkingSlots.isEmpty()) {
-                        // animate camera to last entry
-                        ParkingSlot last = mParkingSlots.get(mParkingSlots.size() - 1);
-                        LatLng latlong = new LatLng(last.DlugoscGeo, last.SzerokoscGeo);
-                        CameraPosition position = CameraPosition.builder().target(latlong).zoom(13).build();
-                        CameraUpdate cameraUpdate = CameraUpdateFactory.newCameraPosition(position);
-                        mMap.animateCamera(cameraUpdate);
-                    }
+                for (ParkingSlot r : mParkingSlots) {
+                    Marker marker = mMap.addMarker(createMarkerFrom(r));
+                    markerMap.put(marker, r);
                 }
+
+                if (mParkingSlots.isEmpty())
+                    return;
+
+                // animate camera to last entry
+                ParkingSlot last = mParkingSlots.get(mParkingSlots.size() - 1);
+                LatLng latlong = new LatLng(last.DlugoscGeo, last.SzerokoscGeo);
+                CameraPosition position = CameraPosition.builder().target(latlong).zoom(13).build();
+                CameraUpdate cameraUpdate = CameraUpdateFactory.newCameraPosition(position);
+                mMap.animateCamera(cameraUpdate);
             }
 
             @Override
             public void onFailure(Call<List<ParkingSlot>> call, Throwable t) {
-                //progressDialog.dismiss();
-                Toast.makeText(MapsActivity.this, "Something went wrong...Please try later!", Toast.LENGTH_SHORT).show();
+                Toast.makeText(context, "Something went wrong...Please try later!", Toast.LENGTH_SHORT).show();
             }
         });
         mMap.setOnMarkerClickListener(this);
     }
 
+    @NonNull
+    private MarkerOptions createMarkerFrom(ParkingSlot r) {
+        return new MarkerOptions()
+                .position(new LatLng(r.DlugoscGeo, r.SzerokoscGeo))
+                .title(String.valueOf(r.Miejsce))
+                .snippet(r.CzyZajete ? "Zajęte miejsce" : "Wolne miejsce")
+                .icon(BitmapDescriptorFactory.defaultMarker(r.CzyZajete ? BitmapDescriptorFactory.HUE_RED : BitmapDescriptorFactory.HUE_AZURE));
+    }
+
+    public AlertDialog.Builder getAlertBuilder() {
+        AlertDialog.Builder builder;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            builder = new AlertDialog.Builder(context, android.R.style.Theme_Material_Dialog_Alert);
+        } else {
+            builder = new AlertDialog.Builder(context);
+        }
+        return builder;
+    }
+
     @Override
     public boolean onMarkerClick(Marker marker) {
         final ParkingSlot selectedParkingSlot = markerMap.get(marker);
-        AlertDialog.Builder builder;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            builder = new AlertDialog.Builder(MapsActivity.this, android.R.style.Theme_Material_Dialog_Alert);
-        } else {
-            builder = new AlertDialog.Builder(MapsActivity.this);
-        }
-        builder.setTitle("Rezerwacja miejsca")
+
+        getAlertBuilder().setTitle("Rezerwacja miejsca")
                 .setMessage("Czy chcesz zarezerwować miejsce parkingowe #" + selectedParkingSlot.Id)
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
                         ReservationRequest request = new ReservationRequest();
                         request.slotId = selectedParkingSlot.Id;
-                        reservationService.book(request)
-                                .enqueue(new Callback<ReservationAdded>() {
-                                    @Override
-                                    public void onResponse(Call<ReservationAdded> call, Response<ReservationAdded> response) {
-                                        mReservationAdded = response.body();
-                                        if (mReservationAdded != null) {
-                                            showSnackbar(l_main, "Reservation made successfully. Reservation ID=" + mReservationAdded.reservationId, Snackbar.LENGTH_LONG);
+                        reservationService.book(request).enqueue(new Callback<ReservationAdded>() {
+                            @Override
+                            public void onResponse(Call<ReservationAdded> call, Response<ReservationAdded> response) {
+                                mReservationAdded = response.body();
+                                if (mReservationAdded != null) {
+                                    showSnackbar(l_main,
+                                            String.format("Reservation made successfully. Reservation ID %s",
+                                                    mReservationAdded.reservationId),
+                                            Snackbar.LENGTH_LONG);
+                                    cardView.setVisibility(View.VISIBLE);
+                                    startReservationTimer(selectedParkingSlot);
+                                } else {
+                                    showSnackbar(l_main, "ERROR", Snackbar.LENGTH_SHORT);
+                                }
+                            }
 
-                                            cardView.setVisibility(View.VISIBLE);
-
-                                            final Handler handler = new Handler();
-
-                                            TimerTask timertask = new TimerTask() {
-                                                @Override
-                                                public void run() {
-                                                    handler.post(new Runnable() {
-                                                        public void run() {
-                                                            long timeLeft = mReservationAdded.expirationDate.getTime() - (new java.util.Date()).getTime();
-                                                            Date date = new Date();
-                                                            date.setTime(timeLeft);
-                                                            tv_card_time.setText(date.getMinutes() + " : " + date.getSeconds());
-                                                        }
-                                                    });
-                                                }
-                                            };
-                                            Timer timer = new Timer();
-                                            timer.schedule(timertask, 0, 1000);
-                                        } else {
-                                            showSnackbar(l_main, "ERROR", Snackbar.LENGTH_SHORT);
-                                        }
-                                    }
-
-                                    @Override
-                                    public void onFailure(Call<ReservationAdded> call, Throwable t) {
-                                        showSnackbar(l_main, "ERROR", Snackbar.LENGTH_SHORT);
-                                    }
-                                });
+                            @Override
+                            public void onFailure(Call<ReservationAdded> call, Throwable t) {
+                                showSnackbar(l_main, "ERROR", Snackbar.LENGTH_SHORT);
+                            }
+                        });
                     }
                 })
                 .setIcon(android.R.drawable.ic_dialog_info).show();
@@ -170,7 +169,37 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         return false;
     }
 
-    public void showSnackbar(View view, String message, int duration) {
+    private void startReservationTimer(final ParkingSlot selectedParkingSlot) {
+        final Handler handler = new Handler();
+
+        TimerTask timertask = new TimerTask() {
+            @Override
+            public void run() {
+                handler.post(new Runnable() {
+                    public void run() {
+                        long expirationDate = mReservationAdded.expirationDate.getTime();
+                        long timeLeft = Math.min(expirationDate - (new Date()).getTime(), 0);
+                        Date date = new Date();
+                        date.setTime(timeLeft);
+                        tv_card_time.setText(date.getMinutes() + " : " + date.getSeconds());
+                        if (timeLeft == 0) {
+                            getExpiredReservationAlertDialog(selectedParkingSlot);
+                        }
+                    }
+                });
+            }
+        };
+        Timer timer = new Timer();
+        timer.schedule(timertask, 0, 1000);
+    }
+
+    private void getExpiredReservationAlertDialog(ParkingSlot selectedParkingSlot) {
+        getAlertBuilder().setTitle("Rezerwacja wygasła!")
+                .setMessage("Twoja rezerwacja miejsca #" + selectedParkingSlot.Id + "już wygasła")
+                .setPositiveButton(android.R.string.ok, null).show();
+    }
+
+    void showSnackbar(View view, String message, int duration) {
         Snackbar.make(view, message, duration).show();
     }
 }
