@@ -4,7 +4,11 @@ import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.os.Build;
 import android.os.Bundle;
+import android.support.design.widget.Snackbar;
 import android.support.v4.app.FragmentActivity;
+import android.support.v7.widget.CardView;
+import android.view.View;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.estonteco.androidapp.R;
@@ -20,11 +24,13 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +45,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     ReservationService reservationService = RetrofitClientInstance.getRetrofitInstance().create(ReservationService.class);
     SlotService slotService = NetworkServiceFactory.createSlotService();
     ReservationAdded mReservationAdded;
+    View l_main;
+    Snackbar xd;
+    CardView cardView;
+    TextView tv_card_time;
     private GoogleMap mMap;
     private List<ParkingSlot> mParkingSlots;
 
@@ -51,6 +61,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
         markerMap = new HashMap<>();
+        l_main = findViewById(R.id.drawer_layout);
+        cardView = findViewById(R.id.maps_cv);
+        tv_card_time = findViewById(R.id.tv_card_time);
     }
 
     @Override
@@ -67,7 +80,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         Marker marker = mMap.addMarker(
                                 new MarkerOptions()
                                         .position(new LatLng(r.DlugoscGeo, r.SzerokoscGeo))
-                                        .title("xd")
+                                        .title(String.valueOf(r.Miejsce))
+                                        .snippet(r.CzyZajete ? "Zajęte miejsce" : "Wolne miejsce")
+                                        .icon(BitmapDescriptorFactory.defaultMarker(r.CzyZajete ? BitmapDescriptorFactory.HUE_RED : BitmapDescriptorFactory.HUE_AZURE))
                         );
                         markerMap.put(marker, r);
                     }
@@ -114,26 +129,31 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                     public void onResponse(Call<ReservationAdded> call, Response<ReservationAdded> response) {
                                         mReservationAdded = response.body();
                                         if (mReservationAdded != null) {
-                                            Toast.makeText(MapsActivity.this,
-                                                    "Reservation made successfully. Reservation ID=" + mReservationAdded.reservationId,
-                                                    Toast.LENGTH_LONG).show();
-                                        }else{
-                                            Toast.makeText(MapsActivity.this, "ERROR", Toast.LENGTH_LONG)
-                                                    .show();
+                                            showSnackbar(l_main, "Reservation made successfully. Reservation ID=" + mReservationAdded.reservationId, Snackbar.LENGTH_LONG);
+
+                                            cardView.setVisibility(View.VISIBLE);
+                                            long timeLeft = mReservationAdded.expirationDate.getTime() - (new java.util.Date()).getTime();
+                                            Date date = new Date();
+                                            date.setTime(timeLeft);
+                                            tv_card_time.setText(date.getMinutes() + " : " + date.getSeconds());
+                                        } else {
+                                            showSnackbar(l_main, "ERROR", Snackbar.LENGTH_SHORT);
                                         }
                                     }
 
                                     @Override
                                     public void onFailure(Call<ReservationAdded> call, Throwable t) {
-                                        Toast.makeText(MapsActivity.this, "ERROR", Toast.LENGTH_LONG)
-                                                .show();
+                                        showSnackbar(l_main, "ERROR", Snackbar.LENGTH_SHORT);
                                     }
                                 });
                     }
                 })
-                .setIcon(android.R.drawable.ic_dialog_alert)
-                .show();
+                .setIcon(android.R.drawable.ic_dialog_info).show();
 
         return false;
+    }
+
+    public void showSnackbar(View view, String message, int duration) {
+        Snackbar.make(view, message, duration).show();
     }
 }
