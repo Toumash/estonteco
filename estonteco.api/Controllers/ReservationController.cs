@@ -10,7 +10,6 @@ using Microsoft.AspNetCore.Mvc;
 namespace estonteco.api.Controllers
 {
     [Produces("application/json")]
-    [Route("api/[controller]/[action]")]
     public class ReservationController : Controller
     {
         EstontecoDbContext _db;
@@ -22,7 +21,6 @@ namespace estonteco.api.Controllers
 
 
         // GET: api/Reservation
-        [HttpGet("api/reservation")]
         public IEnumerable<InfoRezerwacja> Get()
         {
             return _db.Rezerwacje.ToList();
