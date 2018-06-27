@@ -80,6 +80,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
 
+        refreshData();
+        mMap.setOnMarkerClickListener(this);
+    }
+
+    private void refreshData() {
         Call<List<ParkingSlot>> call = slotService.getAllParkingSlots();
         call.enqueue(new Callback<List<ParkingSlot>>() {
             @Override
@@ -109,7 +114,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 Toast.makeText(context, "Something went wrong...Please try later!", Toast.LENGTH_SHORT).show();
             }
         });
-        mMap.setOnMarkerClickListener(this);
     }
 
     @NonNull
@@ -150,7 +154,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     @Override
-    public boolean onMarkerClick(Marker marker) {
+    public boolean onMarkerClick(final Marker marker) {
         final ParkingSlot selectedParkingSlot = markerMap.get(marker);
 
         if (selectedParkingSlot.CzyZajete || selectedParkingSlot.CzyZarezerwowane) {
@@ -179,6 +183,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                             Snackbar.LENGTH_LONG);
                                     cardView.setVisibility(View.VISIBLE);
                                     startReservationTimer(selectedParkingSlot);
+                                    selectedParkingSlot.CzyZajete = true;
+                                    marker.setTitle(getTitleFor(selectedParkingSlot));
+                                    String snippet = String.format(getString(R.string.parking_no), selectedParkingSlot.IdParkingu);
+                                    if (!selectedParkingSlot.CzyZarezerwowane && !selectedParkingSlot.CzyZajete) {
+                                        snippet = "Tapnij, aby zarezerwować";
+                                    }
+                                    marker.setSnippet(snippet);
+                                    marker.setIcon(BitmapDescriptorFactory.defaultMarker(getColorFor(selectedParkingSlot)));
                                 } else {
                                     showSnackbar(l_main, "ERROR", Snackbar.LENGTH_SHORT);
                                 }
